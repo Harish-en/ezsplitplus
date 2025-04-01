@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EzSplit+ - Chia tiền dễ dàng cùng Hoàng</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>EzSplit+</h1>
+            <p class="subtitle">Chia tiền dễ dàng cùng Hoàng</p>
+        </header>
+
+        <main>
+            <section class="add-expense">
+                <h2>Thêm chi tiêu mới</h2>
+                <form id="expenseForm">
+                    <div class="form-group">
+                        <label for="expenseName">Tên chi tiêu:</label>
+                        <input type="text" id="expenseName" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="amount">Số tiền:</label>
+                        <input type="number" id="amount" min="0" step="1000" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="payer">Người trả:</label>
+                        <select id="payer" required>
+                            <option value="">Chọn người trả</option>
+                            <option value="Phương">Phương</option>
+                            <option value="Thắng">Thắng</option>
+                            <option value="Hoàng">Hoàng</option>
+                            <option value="Giang">Giang</option>
+                            <option value="Đức">Đức</option>
+                            <option value="Duyệt">Duyệt</option>
+                            <option value="Tâm">Tâm</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Những người tham gia:</label>
+                        <div class="add-participant">
+                            <input type="text" id="newParticipant" placeholder="Nhập tên người mới">
+                            <button type="button" class="btn-secondary" id="addParticipantBtn">
+                                <i class="fas fa-plus"></i> Thêm
+                            </button>
+                        </div>
+                        <div class="checkbox-group" id="participantsGroup">
+                            <!-- Checkboxes will be added dynamically -->
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="switch">
+                            <input type="checkbox" id="splitEqually">
+                            <span class="slider round"></span>
+                            <span class="switch-label">Chia đều theo đầu người</span>
+                        </label>
+                    </div>
+
+                    <div class="form-group" id="customSplitGroup" style="display: none;">
+                        <label>Chi tiêu theo người:</label>
+                        <div id="customSplitInputs">
+                            <!-- Custom split inputs will be added dynamically -->
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary">Lưu chi tiêu</button>
+                </form>
+            </section>
+
+            <section class="expenses-list">
+                <h2>Danh sách chi tiêu</h2>
+                <div id="expensesList">
+                    <!-- Expenses will be added dynamically -->
+                </div>
+            </section>
+
+            <section class="settlement-results">
+                <h2>Kết quả chi tiền</h2>
+                <div class="results-container">
+                    <div class="personal-summary">
+                        <h3>Tổng kết cá nhân</h3>
+                        <div id="personalSummary">
+                            <!-- Personal summary will be added dynamically -->
+                        </div>
+                    </div>
+                    <div class="settlement-list">
+                        <h3>Các giao dịch cần thực hiện</h3>
+                        <div id="settlementList">
+                            <!-- Settlement list will be added dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Made with ♥️ by duyet</p>
+            <p>&copy; 2024 EzSplit. All rights reserved.</p>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html> 
