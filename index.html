@@ -47,7 +47,11 @@
                         <i class="fas fa-plus"></i> Tạo nhóm mới
                     </button>
                     <div class="form-group">
-                        <input type="text" id="joinGroupInput" placeholder="Nhập mã nhóm để tham gia">
+                        <div class="group-input-container">
+                            <input type="text" id="joinGroupInput" pattern="[0-9]{6}" maxlength="6"
+                                placeholder="Nhập mã nhóm 6 số để tham gia" title="Mã nhóm phải gồm 6 số">
+                            <div class="group-input-error">Mã nhóm phải gồm đúng 6 số</div>
+                        </div>
                         <button id="joinGroupBtn" class="btn-secondary">
                             <i class="fas fa-sign-in-alt"></i> Tham gia nhóm
                         </button>
