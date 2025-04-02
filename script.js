@@ -1,187 +1,663 @@
-<html lang="vi">
+// Danh sách thành viên
+let MEMBERS = JSON.parse(localStorage.getItem('members')) || ['Phương', 'Thắng', 'Hoàng', 'Giang', 'Đức', 'Duyệt', 'Tâm'];
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EzSplit+ - Chia tiền dễ dàng cùng Hoàng</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css">
-</head>
+// Lưu trữ chi tiêu
+let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
 
-<body>
-    <div class="container">
-        <header>
-            <h1>EzSplit+</h1>
-            <p class="subtitle">Chia tiền dễ dàng cùng Hoàng</p>
-            <div id="userInfo" style="display: none;">
-                <span id="userName"></span>
-                <button id="logoutBtn" class="btn-secondary">
-                    <i class="fas fa-sign-out-alt"></i> Đăng xuất
+// Biến toàn cục
+let currentUser = null;
+let currentGroup = null;
+
+// Khởi tạo các phần tử DOM
+const expenseForm = document.getElementById('expenseForm');
+const expensesList = document.getElementById('expensesList');
+const personalSummary = document.getElementById('personalSummary');
+const settlementList = document.getElementById('settlementList');
+const splitEquallyToggle = document.getElementById('splitEqually');
+const customSplitGroup = document.getElementById('customSplitGroup');
+const customSplitInputs = document.getElementById('customSplitInputs');
+const participantsGroup = document.getElementById('participantsGroup');
+const newParticipantInput = document.getElementById('newParticipant');
+const addParticipantBtn = document.getElementById('addParticipantBtn');
+
+// DOM Elements
+const loginSection = document.getElementById('loginSection');
+const groupSection = document.getElementById('groupSection');
+const mainContent = document.getElementById('mainContent');
+const userInfo = document.getElementById('userInfo');
+const userNameSpan = document.getElementById('userName');
+const loginForm = document.getElementById('loginForm');
+const createGroupBtn = document.getElementById('createGroupBtn');
+const joinGroupBtn = document.getElementById('joinGroupBtn');
+const createGroupModal = document.getElementById('createGroupModal');
+const createGroupForm = document.getElementById('createGroupForm');
+const copyGroupCodeBtn = document.getElementById('copyGroupCodeBtn');
+const switchGroupBtn = document.getElementById('switchGroupBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const currentGroupName = document.getElementById('currentGroupName');
+
+// Khởi tạo checkbox cho người tham gia
+function initializeParticipantsCheckboxes() {
+    participantsGroup.innerHTML = '';
+    MEMBERS.forEach(member => {
+        const div = document.createElement('div');
+        div.className = 'participant-item';
+        div.innerHTML = `
+            <input type="checkbox" id="${member}" value="${member}">
+            <label for="${member}">${member}</label>
+            <button type="button" onclick="removeMember('${member}')" title="Xóa người này">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        participantsGroup.appendChild(div);
+    });
+}
+
+// Thêm người tham gia mới
+function addNewParticipant() {
+    const newName = newParticipantInput.value.trim();
+
+    if (!newName) {
+        alert('Vui lòng nhập tên người tham gia!');
+        return;
+    }
+
+    if (MEMBERS.includes(newName)) {
+        alert('Người này đã có trong danh sách!');
+        return;
+    }
+
+    MEMBERS.push(newName);
+    localStorage.setItem('members', JSON.stringify(MEMBERS));
+
+    // Cập nhật danh sách người tham gia
+    initializeParticipantsCheckboxes();
+
+    // Cập nhật danh sách người trả
+    updatePayerSelect();
+
+    // Cập nhật input chia tiền tùy chỉnh
+    initializeCustomSplitInputs();
+
+    // Xóa input
+    newParticipantInput.value = '';
+}
+
+// Xóa người tham gia
+function removeMember(member) {
+    if (confirm(`Bạn có chắc chắn muốn xóa ${member} khỏi danh sách?`)) {
+        MEMBERS = MEMBERS.filter(m => m !== member);
+        localStorage.setItem('members', JSON.stringify(MEMBERS));
+
+        // Cập nhật danh sách người tham gia
+        initializeParticipantsCheckboxes();
+
+        // Cập nhật danh sách người trả
+        updatePayerSelect();
+
+        // Cập nhật input chia tiền tùy chỉnh
+        initializeCustomSplitInputs();
+    }
+}
+
+// Cập nhật danh sách người trả
+function updatePayerSelect() {
+    const payerSelect = document.getElementById('payer');
+    const currentValue = payerSelect.value;
+
+    payerSelect.innerHTML = '<option value="">Chọn người trả</option>';
+    MEMBERS.forEach(member => {
+        const option = document.createElement('option');
+        option.value = member;
+        option.textContent = member;
+        payerSelect.appendChild(option);
+    });
+
+    // Giữ lại giá trị đã chọn nếu vẫn còn trong danh sách
+    if (MEMBERS.includes(currentValue)) {
+        payerSelect.value = currentValue;
+    }
+}
+
+// Xử lý sự kiện thêm người tham gia
+addParticipantBtn.addEventListener('click', addNewParticipant);
+newParticipantInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        addNewParticipant();
+    }
+});
+
+// Khởi tạo input cho chia tiền tùy chỉnh
+function initializeCustomSplitInputs() {
+    customSplitInputs.innerHTML = '';
+    MEMBERS.forEach(member => {
+        const div = document.createElement('div');
+        div.className = 'custom-split-input';
+        div.innerHTML = `
+            <label for="split-${member}">${member}:</label>
+            <input type="number" id="split-${member}" min="0" step="1000" value="0">
+        `;
+        customSplitInputs.appendChild(div);
+    });
+}
+
+// Xử lý sự kiện toggle chia đều
+splitEquallyToggle.addEventListener('change', (e) => {
+    customSplitGroup.style.display = e.target.checked ? 'none' : 'block';
+});
+
+// Kiểm tra kết nối Firebase
+async function checkFirebaseConnection() {
+    try {
+        await db.collection('test').doc('test').set({
+            test: true,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log('Firebase connection successful');
+        return true;
+    } catch (error) {
+        console.error('Firebase connection error:', error);
+        showToast('Lỗi kết nối: ' + error.message);
+        return false;
+    }
+}
+
+// Khởi tạo ứng dụng
+async function initialize() {
+    try {
+        // Kiểm tra kết nối Firebase
+        const isConnected = await checkFirebaseConnection();
+        if (!isConnected) {
+            showToast('Không thể kết nối đến server. Vui lòng thử lại sau.');
+            return;
+        }
+
+        // Kiểm tra người dùng đã đăng nhập chưa
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+            showUserInfo();
+            loadGroups();
+        } else {
+            showLoginForm();
+        }
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showToast('Lỗi khởi tạo ứng dụng: ' + error.message);
+    }
+}
+
+// Hiển thị form đăng nhập
+function showLoginForm() {
+    loginSection.style.display = 'block';
+    groupSection.style.display = 'none';
+    mainContent.style.display = 'none';
+    userInfo.style.display = 'none';
+}
+
+// Hiển thị thông tin người dùng
+function showUserInfo() {
+    userNameSpan.textContent = currentUser.name;
+    userInfo.style.display = 'flex';
+}
+
+// Xử lý đăng nhập
+loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const userName = document.getElementById('userNameInput').value.trim();
+
+    if (!userName) {
+        showToast('Vui lòng nhập tên của bạn!');
+        return;
+    }
+
+    try {
+        // Kiểm tra kết nối Firebase
+        const isConnected = await checkFirebaseConnection();
+        if (!isConnected) {
+            showToast('Không thể kết nối đến server. Vui lòng thử lại sau.');
+            return;
+        }
+
+        // Tạo document user mới nếu chưa tồn tại
+        const userDoc = await db.collection('users').doc(Date.now().toString()).set({
+            name: userName,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        currentUser = {
+            id: userDoc.id,
+            name: userName
+        };
+
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        showToast('Đăng nhập thành công!');
+        showUserInfo();
+        loadGroups();
+    } catch (error) {
+        console.error('Error during login:', error);
+        showToast('Lỗi đăng nhập: ' + error.message);
+    }
+});
+
+// Tải danh sách nhóm
+async function loadGroups() {
+    loginSection.style.display = 'none';
+    groupSection.style.display = 'block';
+    mainContent.style.display = 'none';
+
+    const groupsList = document.getElementById('groupsList');
+    groupsList.innerHTML = '';
+
+    try {
+        const snapshot = await db.collection('users').doc(currentUser.id).collection('groups').get();
+
+        snapshot.forEach(doc => {
+            const group = { id: doc.id, ...doc.data() };
+            const div = document.createElement('div');
+            div.className = 'group-item';
+            div.innerHTML = `
+                <div class="group-name">${group.name}</div>
+                <div class="group-code">${group.id}</div>
+            `;
+            div.onclick = () => selectGroup(group);
+            groupsList.appendChild(div);
+        });
+    } catch (error) {
+        console.error('Error loading groups:', error);
+        showToast('Không thể tải danh sách nhóm');
+    }
+}
+
+// Tạo nhóm mới
+createGroupBtn.addEventListener('click', () => {
+    createGroupModal.style.display = 'flex';
+});
+
+createGroupForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const groupName = document.getElementById('groupName').value.trim();
+
+    if (!groupName) {
+        showToast('Vui lòng nhập tên nhóm!');
+        return;
+    }
+
+    try {
+        // Tạo mã nhóm ngẫu nhiên 6 số
+        const groupCode = generateGroupCode();
+
+        // Tạo document mới trong collection groups
+        await db.collection('groups').doc(groupCode).set({
+            name: groupName,
+            createdBy: currentUser.id,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            members: [currentUser.id]
+        });
+
+        // Thêm nhóm vào danh sách nhóm của user
+        await db.collection('users').doc(currentUser.id).collection('groups').doc(groupCode).set({
+            name: groupName,
+            joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Đóng modal và load lại danh sách nhóm
+        closeCreateGroupModal();
+        showToast('Tạo nhóm thành công!');
+        loadGroups();
+    } catch (error) {
+        console.error('Error creating group:', error);
+        showToast('Không thể tạo nhóm: ' + error.message);
+    }
+});
+
+// Xử lý nhập mã nhóm
+const joinGroupInput = document.getElementById('joinGroupInput');
+joinGroupInput.addEventListener('input', (e) => {
+    // Chỉ cho phép nhập số
+    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+
+    // Giới hạn độ dài 6 số
+    if (e.target.value.length > 6) {
+        e.target.value = e.target.value.slice(0, 6);
+    }
+});
+
+// Xử lý tham gia nhóm
+joinGroupBtn.addEventListener('click', async () => {
+    const groupCode = joinGroupInput.value;
+    if (groupCode.length !== 6 || !/^\d+$/.test(groupCode)) {
+        showToast('Mã nhóm phải gồm đúng 6 số');
+        return;
+    }
+
+    try {
+        const groupDoc = await db.collection('groups').doc(groupCode).get();
+
+        if (!groupDoc.exists) {
+            showToast('Không tìm thấy nhóm với mã này!');
+            return;
+        }
+
+        const groupData = groupDoc.data();
+
+        // Kiểm tra xem đã là thành viên chưa
+        if (groupData.members.some(member => member.id === currentUser.id)) {
+            showToast('Bạn đã là thành viên của nhóm này!');
+            return;
+        }
+
+        // Thêm người dùng vào nhóm
+        await db.collection('groups').doc(groupCode).update({
+            members: firebase.firestore.FieldValue.arrayUnion({
+                id: currentUser.id,
+                name: currentUser.name
+            })
+        });
+
+        // Thêm nhóm vào danh sách nhóm của người dùng
+        await db.collection('users').doc(currentUser.id).collection('groups').doc(groupCode).set({
+            name: groupData.name,
+            joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        document.getElementById('joinGroupInput').value = '';
+        loadGroups();
+        showToast('Đã tham gia nhóm thành công!');
+    } catch (error) {
+        console.error('Error joining group:', error);
+        showToast('Không thể tham gia nhóm');
+    }
+});
+
+// Chọn nhóm
+async function selectGroup(group) {
+    currentGroup = group;
+    localStorage.setItem('currentGroup', JSON.stringify(group));
+
+    groupSection.style.display = 'none';
+    mainContent.style.display = 'block';
+
+    currentGroupName.textContent = group.name;
+
+    // Tải dữ liệu của nhóm
+    await loadGroupData();
+}
+
+// Tải dữ liệu của nhóm
+async function loadGroupData() {
+    try {
+        const groupDoc = await db.collection('groups').doc(currentGroup.id).get();
+        const groupData = groupDoc.data();
+
+        // Cập nhật danh sách thành viên
+        MEMBERS = groupData.members.map(member => member.name);
+
+        // Tải chi tiêu
+        const expensesSnapshot = await db.collection('groups').doc(currentGroup.id)
+            .collection('expenses').orderBy('createdAt', 'desc').get();
+
+        expenses = expensesSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        // Cập nhật giao diện
+        initializeParticipantsCheckboxes();
+        updatePayerSelect();
+        initializeCustomSplitInputs();
+        updateExpensesList();
+        updateSettlementResults();
+    } catch (error) {
+        console.error('Error loading group data:', error);
+        showToast('Không thể tải dữ liệu nhóm');
+    }
+}
+
+// Lưu chi tiêu mới
+expenseForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const expenseName = document.getElementById('expenseName').value;
+    const amount = parseFloat(document.getElementById('amount').value);
+    const payer = document.getElementById('payer').value;
+    const participants = Array.from(document.querySelectorAll('#participantsGroup input:checked')).map(cb => cb.value);
+    const splitEqually = splitEquallyToggle.checked;
+
+    if (!expenseName || !amount || !payer || participants.length === 0) {
+        showToast('Vui lòng điền đầy đủ thông tin!');
+        return;
+    }
+
+    let splits = {};
+    if (splitEqually) {
+        const splitAmount = amount / participants.length;
+        participants.forEach(participant => {
+            splits[participant] = splitAmount;
+        });
+    } else {
+        let totalCustomSplit = 0;
+        participants.forEach(participant => {
+            const splitAmount = parseFloat(document.getElementById(`split-${participant}`).value) || 0;
+            splits[participant] = splitAmount;
+            totalCustomSplit += splitAmount;
+        });
+
+        if (Math.abs(totalCustomSplit - amount) > 0.01) {
+            showToast('Tổng số tiền chia phải bằng với số tiền chi tiêu!');
+            return;
+        }
+    }
+
+    try {
+        await db.collection('groups').doc(currentGroup.id).collection('expenses').add({
+            name: expenseName,
+            amount,
+            payer,
+            participants,
+            splits,
+            createdBy: currentUser.id,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        expenseForm.reset();
+        await loadGroupData();
+        showToast('Đã lưu chi tiêu thành công!');
+    } catch (error) {
+        console.error('Error saving expense:', error);
+        showToast('Không thể lưu chi tiêu');
+    }
+});
+
+// Cập nhật danh sách chi tiêu
+function updateExpensesList() {
+    expensesList.innerHTML = '';
+    expenses.forEach(expense => {
+        const div = document.createElement('div');
+        div.className = 'expense-item';
+        div.innerHTML = `
+            <div>
+                <h3>${expense.name}</h3>
+                <p>Số tiền: ${formatCurrency(expense.amount)}</p>
+                <p>Người trả: ${expense.payer}</p>
+                <p>Người tham gia: ${expense.participants.join(', ')}</p>
+            </div>
+            <div class="expense-actions">
+                <button class="btn-edit" onclick="editExpense(${expense.id})">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-delete" onclick="deleteExpense(${expense.id})">
+                    <i class="fas fa-trash"></i>
                 </button>
             </div>
-        </header>
+        `;
+        expensesList.appendChild(div);
+    });
+}
 
-        <!-- Phần đăng nhập -->
-        <section id="loginSection" class="login-section">
-            <h2>Đăng nhập / Tham gia nhóm</h2>
-            <form id="loginForm">
-                <div class="form-group">
-                    <label for="userNameInput">Tên của bạn:</label>
-                    <input type="text" id="userNameInput" required placeholder="Nhập tên của bạn">
-                </div>
-                <button type="submit" class="btn-primary">Tiếp tục</button>
-            </form>
-        </section>
+// Cập nhật kết quả chi tiền
+function updateSettlementResults() {
+    const balances = {};
+    MEMBERS.forEach(member => {
+        balances[member] = 0;
+    });
 
-        <!-- Phần chọn nhóm -->
-        <section id="groupSection" class="group-section" style="display: none;">
-            <h2>Chọn nhóm</h2>
-            <div class="groups-container">
-                <div id="groupsList" class="groups-list">
-                    <!-- Danh sách nhóm sẽ được thêm vào đây -->
-                </div>
-                <div class="group-actions">
-                    <button id="createGroupBtn" class="btn-primary">
-                        <i class="fas fa-plus"></i> Tạo nhóm mới
-                    </button>
-                    <div class="form-group">
-                        <div class="group-input-container">
-                            <input type="text" id="joinGroupInput" pattern="[0-9]{6}" maxlength="6"
-                                placeholder="Nhập mã nhóm 6 số để tham gia" title="Mã nhóm phải gồm 6 số">
-                            <div class="group-input-error">Mã nhóm phải gồm đúng 6 số</div>
-                        </div>
-                        <button id="joinGroupBtn" class="btn-secondary">
-                            <i class="fas fa-sign-in-alt"></i> Tham gia nhóm
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </section>
+    // Tính toán số dư cho mỗi người
+    expenses.forEach(expense => {
+        // Người trả được cộng số tiền đã trả
+        balances[expense.payer] += expense.amount;
 
-        <!-- Form tạo nhóm mới -->
-        <div id="createGroupModal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <h3>Tạo nhóm mới</h3>
-                <form id="createGroupForm">
-                    <div class="form-group">
-                        <label for="groupName">Tên nhóm:</label>
-                        <input type="text" id="groupName" required placeholder="Nhập tên nhóm">
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="closeCreateGroupModal()">Hủy</button>
-                        <button type="submit" class="btn-primary">Tạo nhóm</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+        // Người tham gia bị trừ số tiền phải trả
+        Object.entries(expense.splits).forEach(([participant, amount]) => {
+            balances[participant] -= amount;
+        });
+    });
 
-        <!-- Phần chính của ứng dụng -->
-        <main id="mainContent" style="display: none;">
-            <div class="group-header">
-                <h2 id="currentGroupName"></h2>
-                <div class="group-info">
-                    <button id="copyGroupCodeBtn" class="btn-secondary">
-                        <i class="fas fa-copy"></i> Sao chép mã nhóm
-                    </button>
-                    <button id="switchGroupBtn" class="btn-secondary">
-                        <i class="fas fa-exchange-alt"></i> Đổi nhóm
-                    </button>
-                </div>
-            </div>
+    // Hiển thị tổng kết cá nhân
+    personalSummary.innerHTML = '';
+    Object.entries(balances).forEach(([member, balance]) => {
+        const div = document.createElement('div');
+        div.className = 'settlement-item';
+        div.innerHTML = `
+            <span>${member}:</span>
+            <span class="${balance >= 0 ? 'positive' : 'negative'}">
+                ${formatCurrency(balance)}
+            </span>
+        `;
+        personalSummary.appendChild(div);
+    });
 
-            <section class="add-expense">
-                <h2>Thêm chi tiêu mới</h2>
-                <form id="expenseForm">
-                    <div class="form-group">
-                        <label for="expenseName">Tên chi tiêu:</label>
-                        <input type="text" id="expenseName" required>
-                    </div>
+    // Tính toán và hiển thị các giao dịch cần thực hiện
+    const settlements = calculateSettlements(balances);
+    settlementList.innerHTML = '';
+    settlements.forEach(settlement => {
+        const div = document.createElement('div');
+        div.className = 'settlement-item';
+        div.innerHTML = `
+            <span>${settlement.from} → ${settlement.to}:</span>
+            <span>${formatCurrency(settlement.amount)}</span>
+        `;
+        settlementList.appendChild(div);
+    });
+}
 
-                    <div class="form-group">
-                        <label for="amount">Số tiền:</label>
-                        <input type="number" id="amount" min="0" step="1000" required>
-                    </div>
+// Tính toán các giao dịch cần thực hiện
+function calculateSettlements(balances) {
+    const settlements = [];
+    const debtors = Object.entries(balances)
+        .filter(([_, balance]) => balance < 0)
+        .map(([person, balance]) => ({ person, balance: -balance }))
+        .sort((a, b) => b.balance - a.balance);
 
-                    <div class="form-group">
-                        <label for="payer">Người trả:</label>
-                        <select id="payer" required>
-                            <option value="">Chọn người trả</option>
-                        </select>
-                    </div>
+    const creditors = Object.entries(balances)
+        .filter(([_, balance]) => balance > 0)
+        .map(([person, balance]) => ({ person, balance }))
+        .sort((a, b) => b.balance - a.balance);
 
-                    <div class="form-group">
-                        <label>Những người tham gia:</label>
-                        <div class="add-participant">
-                            <input type="text" id="newParticipant" placeholder="Nhập tên người mới">
-                            <button type="button" class="btn-secondary" id="addParticipantBtn">
-                                <i class="fas fa-plus"></i> Thêm
-                            </button>
-                            <button type="button" class="btn-secondary" id="selectAllBtn">
-                                <i class="fas fa-check-double"></i> All
-                            </button>
-                        </div>
-                        <div class="checkbox-group" id="participantsGroup">
-                            <!-- Checkboxes will be added dynamically -->
-                        </div>
-                    </div>
+    let debtorIndex = 0;
+    let creditorIndex = 0;
 
-                    <div class="form-group">
-                        <label class="switch">
-                            <span class="switch-label">Chia đều theo đầu người</span>
-                            <input type="checkbox" id="splitEqually">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
+    while (debtorIndex < debtors.length && creditorIndex < creditors.length) {
+        const debtor = debtors[debtorIndex];
+        const creditor = creditors[creditorIndex];
 
-                    <div class="form-group" id="customSplitGroup" style="display: none;">
-                        <label>Chi tiêu theo người:</label>
-                        <div id="customSplitInputs">
-                            <!-- Custom split inputs will be added dynamically -->
-                        </div>
-                    </div>
+        const amount = Math.min(debtor.balance, creditor.balance);
+        settlements.push({
+            from: debtor.person,
+            to: creditor.person,
+            amount
+        });
 
-                    <button type="submit" class="btn-primary">Lưu chi tiêu</button>
-                </form>
-            </section>
+        debtor.balance -= amount;
+        creditor.balance -= amount;
 
-            <section class="expenses-list">
-                <h2>Danh sách chi tiêu</h2>
-                <div id="expensesList">
-                    <!-- Expenses will be added dynamically -->
-                </div>
-            </section>
+        if (debtor.balance === 0) debtorIndex++;
+        if (creditor.balance === 0) creditorIndex++;
+    }
 
-            <section class="settlement-results">
-                <h2>Kết quả chi tiền</h2>
-                <div class="results-container">
-                    <div class="personal-summary">
-                        <h3>Tổng kết cá nhân</h3>
-                        <div id="personalSummary">
-                            <!-- Personal summary will be added dynamically -->
-                        </div>
-                    </div>
-                    <div class="settlement-list">
-                        <h3>Các giao dịch cần thực hiện</h3>
-                        <div id="settlementList">
-                            <!-- Settlement list will be added dynamically -->
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
+    return settlements;
+}
 
-        <footer>
-            <p>Made with ♥️ by Harish </p>
-            <p>&copy; 2025 EzSplit+. All rights reserved.</p>
-        </footer>
-    </div>
+// Xóa chi tiêu
+async function deleteExpense(id) {
+    if (confirm('Bạn có chắc chắn muốn xóa chi tiêu này?')) {
+        try {
+            await db.collection('groups').doc(currentGroup.id).collection('expenses').doc(id).delete();
+            await loadGroupData();
+            showToast('Đã xóa chi tiêu thành công!');
+        } catch (error) {
+            console.error('Error deleting expense:', error);
+            showToast('Không thể xóa chi tiêu');
+        }
+    }
+}
 
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="firebase-config.js"></script>
-    <script src="script.js"></script>
-</body>
+// Chỉnh sửa chi tiêu
+function editExpense(id) {
+    const expense = expenses.find(e => e.id === id);
+    if (!expense) return;
 
-</html>
+    // TODO: Implement edit functionality
+    alert('Tính năng chỉnh sửa đang được phát triển!');
+}
+
+// Định dạng tiền tệ
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND'
+    }).format(amount);
+}
+
+// Các hàm tiện ích
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    toast.style.display = 'block';
+
+    setTimeout(() => {
+        toast.style.display = 'none';
+        toast.remove();
+    }, 3000);
+}
+
+function closeCreateGroupModal() {
+    createGroupModal.style.display = 'none';
+    createGroupForm.reset();
+}
+
+// Copy mã nhóm
+copyGroupCodeBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(currentGroup.id)
+        .then(() => showToast('Đã sao chép mã nhóm!'))
+        .catch(() => showToast('Không thể sao chép mã nhóm'));
+});
+
+// Đổi nhóm
+switchGroupBtn.addEventListener('click', () => {
+    mainContent.style.display = 'none';
+    groupSection.style.display = 'block';
+    loadGroups();
+});
+
+// Đăng xuất
+logoutBtn.addEventListener('click', () => {
+    if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('currentGroup');
+        currentUser = null;
+        currentGroup = null;
+        showLoginForm();
+    }
+});
+
+// Tạo mã nhóm ngẫu nhiên 6 số
+function generateGroupCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Khởi tạo ứng dụng
+document.addEventListener('DOMContentLoaded', initialize); 
