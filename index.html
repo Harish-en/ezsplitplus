@@ -8,6 +8,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
+
+    <!-- Firebase App (the core Firebase SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 
 <body>
@@ -178,14 +182,23 @@
         </footer>
     </div>
 
-    <!-- The core Firebase JS SDK is always required and must be listed first -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-
-    <!-- Add Firebase products that you want to use -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
     <!-- Initialize Firebase -->
-    <script src="firebase-config.js"></script>
+    <script>
+        // Your web app's Firebase configuration
+        var firebaseConfig = {
+            apiKey: "AIzaSyCXDgnm-taNPUDZNRK1YuHmfUV0Pu7BDPk",
+            authDomain: "ezsplit-plus.firebaseapp.com",
+            projectId: "ezsplit-plus",
+            storageBucket: "ezsplit-plus.firebasestorage.app",
+            messagingSenderId: "1082075090740",
+            appId: "1:1082075090740:web:cf424da6cac9dd652e5f61",
+            measurementId: "G-KEDEKV4RY3"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+    </script>
 
     <!-- Your web app -->
     <script src="script.js"></script>
