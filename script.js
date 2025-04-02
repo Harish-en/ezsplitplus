@@ -56,7 +56,7 @@ function initializeParticipantsCheckboxes() {
 // Thêm người tham gia mới
 function addNewParticipant() {
     const newName = newParticipantInput.value.trim();
-    
+
     if (!newName) {
         alert('Vui lòng nhập tên người tham gia!');
         return;
@@ -69,16 +69,16 @@ function addNewParticipant() {
 
     MEMBERS.push(newName);
     localStorage.setItem('members', JSON.stringify(MEMBERS));
-    
+
     // Cập nhật danh sách người tham gia
     initializeParticipantsCheckboxes();
-    
+
     // Cập nhật danh sách người trả
     updatePayerSelect();
-    
+
     // Cập nhật input chia tiền tùy chỉnh
     initializeCustomSplitInputs();
-    
+
     // Xóa input
     newParticipantInput.value = '';
 }
@@ -88,13 +88,13 @@ function removeMember(member) {
     if (confirm(`Bạn có chắc chắn muốn xóa ${member} khỏi danh sách?`)) {
         MEMBERS = MEMBERS.filter(m => m !== member);
         localStorage.setItem('members', JSON.stringify(MEMBERS));
-        
+
         // Cập nhật danh sách người tham gia
         initializeParticipantsCheckboxes();
-        
+
         // Cập nhật danh sách người trả
         updatePayerSelect();
-        
+
         // Cập nhật input chia tiền tùy chỉnh
         initializeCustomSplitInputs();
     }
@@ -104,7 +104,7 @@ function removeMember(member) {
 function updatePayerSelect() {
     const payerSelect = document.getElementById('payer');
     const currentValue = payerSelect.value;
-    
+
     payerSelect.innerHTML = '<option value="">Chọn người trả</option>';
     MEMBERS.forEach(member => {
         const option = document.createElement('option');
@@ -112,7 +112,7 @@ function updatePayerSelect() {
         option.textContent = member;
         payerSelect.appendChild(option);
     });
-    
+
     // Giữ lại giá trị đã chọn nếu vẫn còn trong danh sách
     if (MEMBERS.includes(currentValue)) {
         payerSelect.value = currentValue;
@@ -178,7 +178,7 @@ function showUserInfo() {
 loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const userName = document.getElementById('userNameInput').value.trim();
-    
+
     if (!userName) {
         showToast('Vui lòng nhập tên của bạn!');
         return;
@@ -205,7 +205,7 @@ async function loadGroups() {
 
     try {
         const snapshot = await db.collection('users').doc(currentUser.id).collection('groups').get();
-        
+
         snapshot.forEach(doc => {
             const group = { id: doc.id, ...doc.data() };
             const div = document.createElement('div');
@@ -262,25 +262,36 @@ createGroupForm.addEventListener('submit', async (e) => {
     }
 });
 
-// Tham gia nhóm
-joinGroupBtn.addEventListener('click', async () => {
-    const groupCode = document.getElementById('joinGroupInput').value.trim();
+// Xử lý nhập mã nhóm
+const joinGroupInput = document.getElementById('joinGroupInput');
+joinGroupInput.addEventListener('input', (e) => {
+    // Chỉ cho phép nhập số
+    e.target.value = e.target.value.replace(/[^0-9]/g, '');
 
-    if (!groupCode) {
-        showToast('Vui lòng nhập mã nhóm!');
+    // Giới hạn độ dài 6 số
+    if (e.target.value.length > 6) {
+        e.target.value = e.target.value.slice(0, 6);
+    }
+});
+
+// Xử lý tham gia nhóm
+joinGroupBtn.addEventListener('click', async () => {
+    const groupCode = joinGroupInput.value;
+    if (groupCode.length !== 6 || !/^\d+$/.test(groupCode)) {
+        showToast('Mã nhóm phải gồm đúng 6 số');
         return;
     }
 
     try {
         const groupDoc = await db.collection('groups').doc(groupCode).get();
-        
+
         if (!groupDoc.exists) {
             showToast('Không tìm thấy nhóm với mã này!');
             return;
         }
 
         const groupData = groupDoc.data();
-        
+
         // Kiểm tra xem đã là thành viên chưa
         if (groupData.members.some(member => member.id === currentUser.id)) {
             showToast('Bạn đã là thành viên của nhóm này!');
@@ -314,12 +325,12 @@ joinGroupBtn.addEventListener('click', async () => {
 async function selectGroup(group) {
     currentGroup = group;
     localStorage.setItem('currentGroup', JSON.stringify(group));
-    
+
     groupSection.style.display = 'none';
     mainContent.style.display = 'block';
-    
+
     currentGroupName.textContent = group.name;
-    
+
     // Tải dữ liệu của nhóm
     await loadGroupData();
 }
@@ -332,11 +343,11 @@ async function loadGroupData() {
 
         // Cập nhật danh sách thành viên
         MEMBERS = groupData.members.map(member => member.name);
-        
+
         // Tải chi tiêu
         const expensesSnapshot = await db.collection('groups').doc(currentGroup.id)
             .collection('expenses').orderBy('createdAt', 'desc').get();
-        
+
         expenses = expensesSnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
@@ -556,7 +567,7 @@ function showToast(message) {
     toast.textContent = message;
     document.body.appendChild(toast);
     toast.style.display = 'block';
-    
+
     setTimeout(() => {
         toast.style.display = 'none';
         toast.remove();
@@ -592,6 +603,11 @@ logoutBtn.addEventListener('click', () => {
         showLoginForm();
     }
 });
+
+// Tạo mã nhóm ngẫu nhiên 6 số
+function generateGroupCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 // Khởi tạo ứng dụng
 document.addEventListener('DOMContentLoaded', initialize); 
