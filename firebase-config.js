@@ -19,5 +19,5 @@ const firebaseConfig = {
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 
-// Initialize Firestore
-const db = firebase.firestore();
+// Initialize Firestore and make it global
+window.db = firebase.firestore();
