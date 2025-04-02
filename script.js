@@ -147,16 +147,44 @@ splitEquallyToggle.addEventListener('change', (e) => {
     customSplitGroup.style.display = e.target.checked ? 'none' : 'block';
 });
 
+// Kiểm tra kết nối Firebase
+async function checkFirebaseConnection() {
+    try {
+        await db.collection('test').doc('test').set({
+            test: true,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log('Firebase connection successful');
+        return true;
+    } catch (error) {
+        console.error('Firebase connection error:', error);
+        showToast('Lỗi kết nối: ' + error.message);
+        return false;
+    }
+}
+
 // Khởi tạo ứng dụng
-function initialize() {
-    // Kiểm tra người dùng đã đăng nhập chưa
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-        currentUser = JSON.parse(savedUser);
-        showUserInfo();
-        loadGroups();
-    } else {
-        showLoginForm();
+async function initialize() {
+    try {
+        // Kiểm tra kết nối Firebase
+        const isConnected = await checkFirebaseConnection();
+        if (!isConnected) {
+            showToast('Không thể kết nối đến server. Vui lòng thử lại sau.');
+            return;
+        }
+
+        // Kiểm tra người dùng đã đăng nhập chưa
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+            showUserInfo();
+            loadGroups();
+        } else {
+            showLoginForm();
+        }
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showToast('Lỗi khởi tạo ứng dụng: ' + error.message);
     }
 }
 
@@ -238,27 +266,30 @@ createGroupForm.addEventListener('submit', async (e) => {
     }
 
     try {
-        const groupRef = await db.collection('groups').add({
+        // Tạo mã nhóm ngẫu nhiên 6 số
+        const groupCode = generateGroupCode();
+
+        // Tạo document mới trong collection groups
+        await db.collection('groups').doc(groupCode).set({
             name: groupName,
             createdBy: currentUser.id,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            members: [{
-                id: currentUser.id,
-                name: currentUser.name
-            }]
+            members: [currentUser.id]
         });
 
-        await db.collection('users').doc(currentUser.id).collection('groups').doc(groupRef.id).set({
+        // Thêm nhóm vào danh sách nhóm của user
+        await db.collection('users').doc(currentUser.id).collection('groups').doc(groupCode).set({
             name: groupName,
             joinedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
+        // Đóng modal và load lại danh sách nhóm
         closeCreateGroupModal();
+        showToast('Tạo nhóm thành công!');
         loadGroups();
-        showToast('Đã tạo nhóm thành công!');
     } catch (error) {
         console.error('Error creating group:', error);
-        showToast('Không thể tạo nhóm mới');
+        showToast('Không thể tạo nhóm: ' + error.message);
     }
 });
 
