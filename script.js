@@ -4,6 +4,10 @@ let MEMBERS = JSON.parse(localStorage.getItem('members')) || ['Phương', 'Thắ
 // Lưu trữ chi tiêu
 let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
 
+// Biến toàn cục
+let currentUser = null;
+let currentGroup = null;
+
 // Khởi tạo các phần tử DOM
 const expenseForm = document.getElementById('expenseForm');
 const expensesList = document.getElementById('expensesList');
@@ -15,6 +19,22 @@ const customSplitInputs = document.getElementById('customSplitInputs');
 const participantsGroup = document.getElementById('participantsGroup');
 const newParticipantInput = document.getElementById('newParticipant');
 const addParticipantBtn = document.getElementById('addParticipantBtn');
+
+// DOM Elements
+const loginSection = document.getElementById('loginSection');
+const groupSection = document.getElementById('groupSection');
+const mainContent = document.getElementById('mainContent');
+const userInfo = document.getElementById('userInfo');
+const userNameSpan = document.getElementById('userName');
+const loginForm = document.getElementById('loginForm');
+const createGroupBtn = document.getElementById('createGroupBtn');
+const joinGroupBtn = document.getElementById('joinGroupBtn');
+const createGroupModal = document.getElementById('createGroupModal');
+const createGroupForm = document.getElementById('createGroupForm');
+const copyGroupCodeBtn = document.getElementById('copyGroupCodeBtn');
+const switchGroupBtn = document.getElementById('switchGroupBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const currentGroupName = document.getElementById('currentGroupName');
 
 // Khởi tạo checkbox cho người tham gia
 function initializeParticipantsCheckboxes() {
@@ -127,8 +147,215 @@ splitEquallyToggle.addEventListener('change', (e) => {
     customSplitGroup.style.display = e.target.checked ? 'none' : 'block';
 });
 
-// Xử lý submit form
-expenseForm.addEventListener('submit', (e) => {
+// Khởi tạo ứng dụng
+function initialize() {
+    // Kiểm tra người dùng đã đăng nhập chưa
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        showUserInfo();
+        loadGroups();
+    } else {
+        showLoginForm();
+    }
+}
+
+// Hiển thị form đăng nhập
+function showLoginForm() {
+    loginSection.style.display = 'block';
+    groupSection.style.display = 'none';
+    mainContent.style.display = 'none';
+    userInfo.style.display = 'none';
+}
+
+// Hiển thị thông tin người dùng
+function showUserInfo() {
+    userNameSpan.textContent = currentUser.name;
+    userInfo.style.display = 'flex';
+}
+
+// Xử lý đăng nhập
+loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const userName = document.getElementById('userNameInput').value.trim();
+    
+    if (!userName) {
+        showToast('Vui lòng nhập tên của bạn!');
+        return;
+    }
+
+    currentUser = {
+        id: Date.now().toString(),
+        name: userName
+    };
+
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    showUserInfo();
+    loadGroups();
+});
+
+// Tải danh sách nhóm
+async function loadGroups() {
+    loginSection.style.display = 'none';
+    groupSection.style.display = 'block';
+    mainContent.style.display = 'none';
+
+    const groupsList = document.getElementById('groupsList');
+    groupsList.innerHTML = '';
+
+    try {
+        const snapshot = await db.collection('users').doc(currentUser.id).collection('groups').get();
+        
+        snapshot.forEach(doc => {
+            const group = { id: doc.id, ...doc.data() };
+            const div = document.createElement('div');
+            div.className = 'group-item';
+            div.innerHTML = `
+                <div class="group-name">${group.name}</div>
+                <div class="group-code">${group.id}</div>
+            `;
+            div.onclick = () => selectGroup(group);
+            groupsList.appendChild(div);
+        });
+    } catch (error) {
+        console.error('Error loading groups:', error);
+        showToast('Không thể tải danh sách nhóm');
+    }
+}
+
+// Tạo nhóm mới
+createGroupBtn.addEventListener('click', () => {
+    createGroupModal.style.display = 'flex';
+});
+
+createGroupForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const groupName = document.getElementById('groupName').value.trim();
+
+    if (!groupName) {
+        showToast('Vui lòng nhập tên nhóm!');
+        return;
+    }
+
+    try {
+        const groupRef = await db.collection('groups').add({
+            name: groupName,
+            createdBy: currentUser.id,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            members: [{
+                id: currentUser.id,
+                name: currentUser.name
+            }]
+        });
+
+        await db.collection('users').doc(currentUser.id).collection('groups').doc(groupRef.id).set({
+            name: groupName,
+            joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        closeCreateGroupModal();
+        loadGroups();
+        showToast('Đã tạo nhóm thành công!');
+    } catch (error) {
+        console.error('Error creating group:', error);
+        showToast('Không thể tạo nhóm mới');
+    }
+});
+
+// Tham gia nhóm
+joinGroupBtn.addEventListener('click', async () => {
+    const groupCode = document.getElementById('joinGroupInput').value.trim();
+
+    if (!groupCode) {
+        showToast('Vui lòng nhập mã nhóm!');
+        return;
+    }
+
+    try {
+        const groupDoc = await db.collection('groups').doc(groupCode).get();
+        
+        if (!groupDoc.exists) {
+            showToast('Không tìm thấy nhóm với mã này!');
+            return;
+        }
+
+        const groupData = groupDoc.data();
+        
+        // Kiểm tra xem đã là thành viên chưa
+        if (groupData.members.some(member => member.id === currentUser.id)) {
+            showToast('Bạn đã là thành viên của nhóm này!');
+            return;
+        }
+
+        // Thêm người dùng vào nhóm
+        await db.collection('groups').doc(groupCode).update({
+            members: firebase.firestore.FieldValue.arrayUnion({
+                id: currentUser.id,
+                name: currentUser.name
+            })
+        });
+
+        // Thêm nhóm vào danh sách nhóm của người dùng
+        await db.collection('users').doc(currentUser.id).collection('groups').doc(groupCode).set({
+            name: groupData.name,
+            joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        document.getElementById('joinGroupInput').value = '';
+        loadGroups();
+        showToast('Đã tham gia nhóm thành công!');
+    } catch (error) {
+        console.error('Error joining group:', error);
+        showToast('Không thể tham gia nhóm');
+    }
+});
+
+// Chọn nhóm
+async function selectGroup(group) {
+    currentGroup = group;
+    localStorage.setItem('currentGroup', JSON.stringify(group));
+    
+    groupSection.style.display = 'none';
+    mainContent.style.display = 'block';
+    
+    currentGroupName.textContent = group.name;
+    
+    // Tải dữ liệu của nhóm
+    await loadGroupData();
+}
+
+// Tải dữ liệu của nhóm
+async function loadGroupData() {
+    try {
+        const groupDoc = await db.collection('groups').doc(currentGroup.id).get();
+        const groupData = groupDoc.data();
+
+        // Cập nhật danh sách thành viên
+        MEMBERS = groupData.members.map(member => member.name);
+        
+        // Tải chi tiêu
+        const expensesSnapshot = await db.collection('groups').doc(currentGroup.id)
+            .collection('expenses').orderBy('createdAt', 'desc').get();
+        
+        expenses = expensesSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        // Cập nhật giao diện
+        initializeParticipantsCheckboxes();
+        updatePayerSelect();
+        initializeCustomSplitInputs();
+        updateExpensesList();
+        updateSettlementResults();
+    } catch (error) {
+        console.error('Error loading group data:', error);
+        showToast('Không thể tải dữ liệu nhóm');
+    }
+}
+
+// Lưu chi tiêu mới
+expenseForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const expenseName = document.getElementById('expenseName').value;
@@ -138,7 +365,7 @@ expenseForm.addEventListener('submit', (e) => {
     const splitEqually = splitEquallyToggle.checked;
 
     if (!expenseName || !amount || !payer || participants.length === 0) {
-        alert('Vui lòng điền đầy đủ thông tin!');
+        showToast('Vui lòng điền đầy đủ thông tin!');
         return;
     }
 
@@ -157,27 +384,29 @@ expenseForm.addEventListener('submit', (e) => {
         });
 
         if (Math.abs(totalCustomSplit - amount) > 0.01) {
-            alert('Tổng số tiền chia phải bằng với số tiền chi tiêu!');
+            showToast('Tổng số tiền chia phải bằng với số tiền chi tiêu!');
             return;
         }
     }
 
-    const expense = {
-        id: Date.now(),
-        name: expenseName,
-        amount,
-        payer,
-        participants,
-        splits,
-        date: new Date().toISOString()
-    };
+    try {
+        await db.collection('groups').doc(currentGroup.id).collection('expenses').add({
+            name: expenseName,
+            amount,
+            payer,
+            participants,
+            splits,
+            createdBy: currentUser.id,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
 
-    expenses.push(expense);
-    localStorage.setItem('expenses', JSON.stringify(expenses));
-
-    updateExpensesList();
-    updateSettlementResults();
-    expenseForm.reset();
+        expenseForm.reset();
+        await loadGroupData();
+        showToast('Đã lưu chi tiêu thành công!');
+    } catch (error) {
+        console.error('Error saving expense:', error);
+        showToast('Không thể lưu chi tiêu');
+    }
 });
 
 // Cập nhật danh sách chi tiêu
@@ -290,12 +519,16 @@ function calculateSettlements(balances) {
 }
 
 // Xóa chi tiêu
-function deleteExpense(id) {
+async function deleteExpense(id) {
     if (confirm('Bạn có chắc chắn muốn xóa chi tiêu này?')) {
-        expenses = expenses.filter(expense => expense.id !== id);
-        localStorage.setItem('expenses', JSON.stringify(expenses));
-        updateExpensesList();
-        updateSettlementResults();
+        try {
+            await db.collection('groups').doc(currentGroup.id).collection('expenses').doc(id).delete();
+            await loadGroupData();
+            showToast('Đã xóa chi tiêu thành công!');
+        } catch (error) {
+            console.error('Error deleting expense:', error);
+            showToast('Không thể xóa chi tiêu');
+        }
     }
 }
 
@@ -316,14 +549,49 @@ function formatCurrency(amount) {
     }).format(amount);
 }
 
-// Khởi tạo trang web
-function initialize() {
-    initializeParticipantsCheckboxes();
-    updatePayerSelect();
-    initializeCustomSplitInputs();
-    updateExpensesList();
-    updateSettlementResults();
+// Các hàm tiện ích
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    toast.style.display = 'block';
+    
+    setTimeout(() => {
+        toast.style.display = 'none';
+        toast.remove();
+    }, 3000);
 }
 
-// Chạy khởi tạo khi trang web được tải
+function closeCreateGroupModal() {
+    createGroupModal.style.display = 'none';
+    createGroupForm.reset();
+}
+
+// Copy mã nhóm
+copyGroupCodeBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(currentGroup.id)
+        .then(() => showToast('Đã sao chép mã nhóm!'))
+        .catch(() => showToast('Không thể sao chép mã nhóm'));
+});
+
+// Đổi nhóm
+switchGroupBtn.addEventListener('click', () => {
+    mainContent.style.display = 'none';
+    groupSection.style.display = 'block';
+    loadGroups();
+});
+
+// Đăng xuất
+logoutBtn.addEventListener('click', () => {
+    if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('currentGroup');
+        currentUser = null;
+        currentGroup = null;
+        showLoginForm();
+    }
+});
+
+// Khởi tạo ứng dụng
 document.addEventListener('DOMContentLoaded', initialize); 
