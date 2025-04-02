@@ -1,5 +1,5 @@
 // Your web app's Firebase configuration
-const firebaseConfig = {
+var firebaseConfig = {
   apiKey: "AIzaSyCXDgnm-taNPUDZNRK1YuHmfUV0Pu7BDPk",
   authDomain: "ezsplit-plus.firebaseapp.com",
   projectId: "ezsplit-plus",
@@ -10,9 +10,5 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-if (typeof firebase !== 'undefined') {
-  firebase.initializeApp(firebaseConfig);
-  window.db = firebase.firestore();
-} else {
-  console.error('Firebase SDK not found');
-}
+firebase.initializeApp(firebaseConfig);
+var db = firebase.firestore();
