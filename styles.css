@@ -1,11 +1,12 @@
 :root {
-    --primary-color: #98D8AA;
-    --primary-dark: #7BCA8F;
+    --primary-color: #9B89B3;
+    --primary-dark: #7B6A96;
     --secondary-color: #F3F4F6;
     --text-color: #333333;
     --border-color: #E5E7EB;
     --error-color: #EF4444;
     --success-color: #10B981;
+    --background-color: #E6E0ED;
 }
 
 * {
@@ -18,7 +19,7 @@ body {
     font-family: 'Roboto', sans-serif;
     line-height: 1.6;
     color: var(--text-color);
-    background-color: #F9FAFB;
+    background-color: var(--background-color);
 }
 
 .container {
@@ -31,17 +32,19 @@ header {
     text-align: center;
     margin-bottom: 40px;
     padding: 20px 0;
+    position: relative;
 }
 
-h1 {
+header h1 {
+    font-size: 2.8rem;
+    margin-bottom: 5px;
     color: var(--primary-color);
-    font-size: 2.5rem;
-    margin-bottom: 10px;
 }
 
-.subtitle {
-    color: #666;
-    font-size: 1.1rem;
+header .subtitle {
+    font-size: 1.2rem;
+    color: var(--text-color);
+    opacity: 0.8;
 }
 
 section {
@@ -139,11 +142,11 @@ select:focus {
     border-radius: 50%;
 }
 
-input:checked + .slider {
+input:checked+.slider {
     background-color: var(--primary-color);
 }
 
-input:checked + .slider:before {
+input:checked+.slider:before {
     transform: translateX(26px);
 }
 
@@ -165,7 +168,7 @@ input:checked + .slider:before {
     transition: all 0.3s;
 }
 
-input:checked ~ .switch-label {
+input:checked~.switch-label {
     background: var(--primary-color);
     color: white;
 }
@@ -383,16 +386,22 @@ footer {
 
 /* User Info */
 #userInfo {
-    margin-top: 15px;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 15px;
+    background: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 #userName {
     font-weight: 500;
-    color: var(--primary-color);
+    color: var(--text-color);
 }
 
 /* Login Section */
@@ -489,14 +498,13 @@ footer {
 /* Group Header */
 .group-header {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
     margin-bottom: 30px;
 }
 
 .group-info {
-    display: flex;
-    gap: 10px;
+    margin-top: 15px;
 }
 
 /* Toast Notification */
@@ -534,4 +542,50 @@ footer {
         width: 95%;
         margin: 10px;
     }
-} 
+}
+
+/* Group Input Validation */
+#joinGroupInput {
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    transition: all 0.3s;
+}
+
+#joinGroupInput:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+#joinGroupInput:invalid {
+    border-color: var(--error-color);
+}
+
+.group-input-container {
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.group-input-error {
+    color: var(--error-color);
+    font-size: 0.85rem;
+    margin-top: 5px;
+    display: none;
+}
+
+#joinGroupInput:invalid+.group-input-error {
+    display: block;
+}
+
+/* Group Name Display */
+#currentGroupName {
+    text-align: center;
+    font-size: 2rem;
+    color: var(--primary-color);
+    margin: 20px 0;
+    padding: 10px;
+    border-bottom: 2px solid var(--primary-color);
+    display: inline-block;
+}
